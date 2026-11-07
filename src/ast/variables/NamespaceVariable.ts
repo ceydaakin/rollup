@@ -147,7 +147,12 @@ export default class NamespaceVariable extends Variable {
 			.filter(([name, variable]) => !isNamespaceExportName(name) && variable.included)
 			.map(([name, variable]) => {
 				const key = unescapeExportName(name);
-				if (this.referencedEarly || variable.isReassigned || variable === this) {
+				if (
+					this.referencedEarly ||
+					variable.isReassigned ||
+					variable === this ||
+					this.isMemberDeclaredAfterNamespace(variable)
+				) {
 					return [
 						null,
 						`get ${stringifyObjectKeyIfNeeded(key)}${_}()${_}{${_}return ${variable.getName(
@@ -208,6 +213,15 @@ export default class NamespaceVariable extends Variable {
 
 	private getMemberVariable(name: string): Variable | undefined {
 		return this.module.getExportedVariablesByName().get(escapeExportName(name));
+	}
+
+	private isMemberDeclaredAfterNamespace(variable: Variable): boolean {
+		return (
+			variable.kind !== 'function' &&
+			!!variable.module &&
+			!variable.module.info.isExternal &&
+			variable.module.execIndex > this.module.execIndex
+		);
 	}
 
 	private includeNonExplicitNamespaces(): void {
